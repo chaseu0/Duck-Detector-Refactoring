@@ -161,13 +161,37 @@ class TeeGrantDomainGranteeSession(
     private var bound: Boolean,
 ) : AutoCloseable {
 
-    fun readGrantedCertificateChain(grantId: Long): TeeGrantDomainGranteeChainResult {
+    fun readGrantedCertificateChainJavaApi(
+        grantId: Long,
+        hiddenApi: Boolean = false,
+    ): TeeGrantDomainGranteeChainResult {
+        val stage = if (hiddenApi) "hidden" else "public"
         return runCatching {
-            proxy.readGrantedCertificateChain(grantId)
+            proxy.readGrantedCertificateChainJavaApi(grantId, hiddenApi)
         }.getOrElse { throwable ->
+            // Keep IPC crashes inspectable but non-visual: detail is one line, stack is hidden-copy only.
+            // IPC 崩溃需要可审计但不能直接上屏：detail 保持单行，堆栈仅供隐藏复制。
             TeeGrantDomainGranteeChainResult(
                 available = false,
-                detail = "Grant-domain grantee binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                detail = "$stage isolated binder call failed: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
+            )
+        }
+    }
+
+    fun readGrantedCertificateChain(
+        grantId: Long,
+        keystore2Binder: IBinder,
+    ): TeeGrantDomainGranteeChainResult {
+        return runCatching {
+            proxy.readGrantedCertificateChain(grantId, keystore2Binder)
+        }.getOrElse { throwable ->
+            // A failed isolated private call is a transport/permission boundary, not a split by itself.
+            // isolated private 调用失败只是传输/权限边界问题，本身不等价于证书链 split。
+            TeeGrantDomainGranteeChainResult(
+                available = false,
+                detail = "isolated binder call blocked: ${GrantDomainFullChainSplitProbe.describeThrowable(throwable)}",
+                diagnosticCopyText = throwable.stackTraceToString().trim(),
             )
         }
     }

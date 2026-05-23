@@ -59,6 +59,8 @@ import com.eltavine.duckdetector.features.tee.data.verification.keystore.PureCer
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingAnomalyResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.TimingSideChannelResult
 import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentResult
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponseAnomalyKind
+import com.eltavine.duckdetector.features.tee.data.verification.keystore.UpdateSubcomponentStaleResponsePersistenceResult
 import com.eltavine.duckdetector.features.tee.data.verification.strongbox.StrongBoxBehaviorResult
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkMode
 import com.eltavine.duckdetector.features.tee.domain.TeeNetworkState
@@ -308,7 +310,8 @@ class TeeReportReducerTest {
                     mismatchIndex = 2,
                     granteeUid = 99001,
                     anomalyKind = GrantDomainAnomalyKind.ISOLATED_CHAIN_SPLIT,
-                    detail = "lengthMismatch owner=3 grantee=2",
+                    detail = "Public: clean • Private: matched lengthMismatch owner=3 grantee=2",
+                    diagnosticCopyText = "isolated diagnostic\nat com.example.Grant.probe(Grant.kt:1)",
                 ),
             ),
         )
@@ -321,7 +324,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Matched", ignoreCase = true) &&
                 it.body.contains("kind=ISOLATED_CHAIN_SPLIT") &&
-                it.body.contains("mismatchIndex=2")
+                it.body.contains("mismatchIndex=2") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.probe") == true
         })
     }
 
@@ -336,7 +341,8 @@ class TeeReportReducerTest {
                     ownerChainLength = 3,
                     granteeUid = 99001,
                     anomalyKind = GrantDomainAnomalyKind.ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                    detail = "Public: clean • Private: private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    diagnosticCopyText = "isolated key-not-found\nat com.example.Grant.keyNotFound(Grant.kt:2)",
                 ),
             ),
         )
@@ -349,7 +355,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("kind=ISOLATED_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
-                it.body.contains("No key found by the given alias")
+                it.body.contains("No key found by the given alias") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.keyNotFound") == true
         })
     }
 
@@ -385,7 +393,8 @@ class TeeReportReducerTest {
                     mismatchIndex = 2,
                     grantIdPresent = true,
                     anomalyKind = GrantSelfDomainAnomalyKind.SELF_CHAIN_SPLIT,
-                    detail = "lengthMismatch owner=3 grantee=2",
+                    detail = "Public: clean • Private: matched lengthMismatch owner=3 grantee=2",
+                    diagnosticCopyText = "self diagnostic\nat com.example.Grant.selfSplit(Grant.kt:3)",
                 ),
             ),
         )
@@ -398,7 +407,9 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.FAIL &&
                 it.body.contains("Matched", ignoreCase = true) &&
                 it.body.contains("kind=SELF_CHAIN_SPLIT") &&
-                it.body.contains("mismatchIndex=2")
+                it.body.contains("mismatchIndex=2") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.selfSplit") == true
         })
     }
 
@@ -410,7 +421,8 @@ class TeeReportReducerTest {
                     executed = true,
                     ownerChainLength = 4,
                     anomalyKind = GrantSelfDomainAnomalyKind.SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN,
-                    detail = "self grantKeyAccess failed: UnrecoverableKeyException: No key found by the given alias",
+                    detail = "Public: clean • Private: private grant failed: ServiceSpecificException(code 7): No key found by the given alias",
+                    diagnosticCopyText = "self key-not-found\nat com.example.Grant.selfKeyNotFound(Grant.kt:4)",
                 ),
             ),
         )
@@ -423,7 +435,9 @@ class TeeReportReducerTest {
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("kind=SELF_GRANT_KEY_NOT_FOUND_AFTER_OWNER_CHAIN") &&
                 it.body.contains("owner=4") &&
-                it.body.contains("No key found by the given alias")
+                it.body.contains("No key found by the given alias") &&
+                !it.body.contains("at com.example") &&
+                it.hiddenCopyText?.contains("at com.example.Grant.selfKeyNotFound") == true
         })
     }
 
@@ -433,7 +447,7 @@ class TeeReportReducerTest {
             baseArtifacts(
                 grantSelfDomainFullChainSplit = GrantSelfDomainFullChainSplitResult(
                     executed = false,
-                    detail = "self grantKeyAccess failed: IllegalStateException: transient service unavailable",
+                    detail = "private grant failed: IllegalStateException: transient service unavailable",
                 ),
             ),
         )
@@ -444,6 +458,142 @@ class TeeReportReducerTest {
                 it.level == TeeSignalLevel.INFO &&
                 it.body.contains("Unavailable", ignoreCase = true) &&
                 it.body.contains("transient service unavailable")
+            })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response persistence becomes supplementary failure`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = true,
+                        available = true,
+                        supportGateClean = true,
+                        updateSucceeded = true,
+                        staleNarrativeDetected = true,
+                        priorChainLength = 3,
+                        postChainLength = 2,
+                        retainedCertificateCount = 1,
+                        postLeafMatchesMarker = false,
+                        anomalyKind =
+                            UpdateSubcomponentStaleResponseAnomalyKind.STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE,
+                        retainedFingerprint = "abc123def456",
+                        detail = "kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE, retained=1",
+                    ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(1, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.summary.contains("UpdateSubcomponent stale TEE response", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.FAIL &&
+                it.body.contains("Matched", ignoreCase = true) &&
+                it.body.contains("kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE") &&
+                it.body.contains("retained=1")
+        })
+    }
+
+    @Test
+    fun `later supplementary failure outranks earlier soter warning`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                soter = TeeSoterState(
+                    serviceReachable = false,
+                    keyPrepared = false,
+                    signSessionAvailable = false,
+                    available = false,
+                    damaged = false,
+                    abnormalEnvironment = true,
+                    summary = "Abnormal Soter environment: Simplified Chinese locale on a likely Soter-supporting device, but PackageManager could not resolve com.tencent.soter.soterserver.",
+                ),
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = true,
+                        available = true,
+                        supportGateClean = true,
+                        updateSucceeded = true,
+                        staleNarrativeDetected = true,
+                        priorChainLength = 3,
+                        postChainLength = 2,
+                        retainedCertificateCount = 1,
+                        postLeafMatchesMarker = false,
+                        anomalyKind =
+                            UpdateSubcomponentStaleResponseAnomalyKind.STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE,
+                        retainedFingerprint = "abc123def456",
+                        detail = "kind=STALE_TEE_RESPONSE_AFTER_KEY_ID_UPDATE, retained=1",
+                    ),
+            ),
+        )
+
+        assertEquals(TeeVerdict.CONSISTENT, report.verdict)
+        assertEquals(2, report.supplementaryIndicatorCount)
+        assertEquals(TeeSignalLevel.FAIL, report.supplementaryReviewLevel)
+        assertTrue(report.signals.any {
+            it.label == "Signals" && it.level == TeeSignalLevel.FAIL
+        })
+        assertTrue(report.summary.contains("UpdateSubcomponent stale TEE response", ignoreCase = true))
+        assertFalse(report.summary.contains("abnormal soter environment", ignoreCase = true))
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Soter" && it.level == TeeSignalLevel.WARN
+        })
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" && it.level == TeeSignalLevel.FAIL
+        })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response clean state stays pass`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = true,
+                        available = true,
+                        supportGateClean = true,
+                        updateSucceeded = true,
+                        staleNarrativeDetected = false,
+                        priorChainLength = 3,
+                        postChainLength = 1,
+                        postLeafMatchesMarker = true,
+                        anomalyKind = UpdateSubcomponentStaleResponseAnomalyKind.NONE,
+                        detail = "kind=NONE, marker leaf returned.",
+                    ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.PASS &&
+                it.body.contains("Clean", ignoreCase = true) &&
+                it.body.contains("kind=NONE")
+        })
+    }
+
+    @Test
+    fun `updateSubcomponent stale response unavailable state stays informational`() {
+        val report = reducer.reduce(
+            baseArtifacts(
+                updateSubcomponentStaleResponsePersistence =
+                    UpdateSubcomponentStaleResponsePersistenceResult(
+                        executed = false,
+                        supportGateClean = false,
+                        anomalyKind = UpdateSubcomponentStaleResponseAnomalyKind.UPDATE_SUBCOMPONENT_UNOBSERVABLE,
+                        detail = "UpdateSubcomponent support gate failed.",
+                    ),
+            ),
+        )
+
+        assertEquals(0, report.supplementaryIndicatorCount)
+        assertTrue(report.sections.single { it.title == "Checks" }.items.any {
+            it.title == "Update persistence" &&
+                it.level == TeeSignalLevel.INFO &&
+                it.body.contains("Unavailable", ignoreCase = true) &&
+                it.body.contains("kind=UPDATE_SUBCOMPONENT_UNOBSERVABLE")
         })
     }
 
@@ -1853,6 +2003,10 @@ class TeeReportReducerTest {
             executed = false,
             detail = "skipped",
         ),
+        updateSubcomponentStaleResponsePersistence: UpdateSubcomponentStaleResponsePersistenceResult =
+            UpdateSubcomponentStaleResponsePersistenceResult(
+                detail = "skipped",
+            ),
     ): TeeScanArtifacts {
         return TeeScanArtifacts(
             snapshot = AttestationSnapshot(
@@ -1940,6 +2094,7 @@ class TeeReportReducerTest {
                 keyNotFoundStyleFailure = false,
                 detail = "ok",
             ),
+            updateSubcomponentStaleResponsePersistence = updateSubcomponentStaleResponsePersistence,
             pruning = OperationPruningResult(
                 suspicious = false,
                 operationsCreated = 18,
