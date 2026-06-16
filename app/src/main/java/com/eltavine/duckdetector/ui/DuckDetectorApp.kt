@@ -70,6 +70,7 @@ import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderView
 import com.eltavine.duckdetector.features.customrom.presentation.CustomRomUiStage
 import com.eltavine.duckdetector.features.customrom.presentation.CustomRomUiState
 import com.eltavine.duckdetector.features.customrom.presentation.CustomRomViewModel
+import com.eltavine.duckdetector.features.dashboard.data.DashboardCliReportStore
 import com.eltavine.duckdetector.features.dashboard.ui.DashboardScreen
 import com.eltavine.duckdetector.features.dashboard.ui.model.DashboardDetectorCardEntry
 import com.eltavine.duckdetector.features.dashboard.ui.model.DashboardDetectorContribution
@@ -657,6 +658,19 @@ private fun AppReadyShell(
             permissionState = notificationPermissionState,
             snapshot = notificationSnapshot,
         )
+    }
+
+    LaunchedEffect(dashboardScanCompletedAtEpochMillis) {
+        val completedAt = dashboardScanCompletedAtEpochMillis ?: return@LaunchedEffect
+        if (dashboardState.isLoading) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            DashboardCliReportStore.persistLatestReport(
+                context = appContext,
+                state = dashboardState,
+                scanDurationMillis = dashboardScanDurationMillis,
+                scanCompletedAtEpochMillis = completedAt,
+            )
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

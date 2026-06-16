@@ -80,6 +80,13 @@ limitations under the License.
             android:exported="false"
             android:isolatedProcess="true"
             android:useAppZygote="true" />
+        <receiver
+            android:name=".features.dashboard.data.DashboardCliExportReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.eltavine.duckdetector.action.EXPORT_CLI_REPORT" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".features.tee.data.verification.keystore.TeeGrantDomainGranteeService"
             android:exported="false"
