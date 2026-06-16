@@ -17,6 +17,7 @@
 package com.eltavine.duckdetector.features.settings.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,8 +35,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NetworkCheck
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
@@ -49,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.i18n.AppLanguageOption
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.licenses.ui.OpenSourceLicensesEntry
 import com.eltavine.duckdetector.features.licenses.ui.OpenSourceLicensesScreen
@@ -60,6 +64,7 @@ import com.eltavine.duckdetector.ui.theme.ShapeTokens
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
+    onAppLanguageChange: (AppLanguageOption) -> Unit,
     onCrlNetworkingChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,6 +105,75 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = ShapeTokens.CornerExtraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Surface(
+                                shape = ShapeTokens.CornerLarge,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .padding(10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Translate,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                WrapSafeText(
+                                    text = stringResource(R.string.settings_language_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                WrapSafeText(
+                                    text = stringResource(R.string.settings_language_summary),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            AppLanguageOption.entries.forEach { option ->
+                                LanguageOptionRow(
+                                    option = option,
+                                    selected = option == uiState.selectedLanguage,
+                                    onClick = { onAppLanguageChange(option) },
+                                )
+                            }
+                        }
+
+                        WrapSafeText(
+                            text = stringResource(R.string.settings_language_footer),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 Surface(
@@ -182,5 +256,31 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(72.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun LanguageOptionRow(
+    option: AppLanguageOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null,
+        )
+        WrapSafeText(
+            text = stringResource(option.labelResId),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }

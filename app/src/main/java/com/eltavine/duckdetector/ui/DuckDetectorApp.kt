@@ -21,6 +21,7 @@ import android.os.Build
 import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +47,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eltavine.duckdetector.BuildConfig
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
+import com.eltavine.duckdetector.core.i18n.AppLanguageOption
 import com.eltavine.duckdetector.core.notifications.ScanNotificationPermissions
 import com.eltavine.duckdetector.core.notifications.ScanProgressNotificationSnapshot
 import com.eltavine.duckdetector.core.notifications.ScanProgressNotifier
@@ -64,6 +65,7 @@ import com.eltavine.duckdetector.core.ui.components.AlphaBuildWarningOverlay
 import com.eltavine.duckdetector.core.ui.components.DetectorAutoExpansionDirective
 import com.eltavine.duckdetector.core.ui.components.LocalDetectorAutoExpansionDirective
 import com.eltavine.duckdetector.core.ui.components.ScreenshotWatermarkOverlay
+import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderUiStage
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderUiState
 import com.eltavine.duckdetector.features.bootloader.presentation.BootloaderViewModel
@@ -593,9 +595,11 @@ private fun AppReadyShell(
             isLoading = isDashboardLoading,
         )
     }
-    val settingsState = remember(networkPrefs.consentGranted) {
+    val localeTags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+    val settingsState = remember(networkPrefs.consentGranted, localeTags) {
         SettingsUiState(
             isCrlNetworkingEnabled = networkPrefs.consentGranted,
+            selectedLanguage = AppLanguageOption.fromLocaleTags(localeTags),
             versionName = BuildConfig.VERSION_NAME,
             versionCode = BuildConfig.VERSION_CODE,
             buildTimeUtc = BuildConfig.BUILD_TIME_UTC,
@@ -700,6 +704,9 @@ private fun AppReadyShell(
             AppDestination.SETTINGS -> {
                 SettingsScreen(
                     uiState = settingsState,
+                    onAppLanguageChange = { option ->
+                        AppCompatDelegate.setApplicationLocales(option.toLocaleListCompat())
+                    },
                     onCrlNetworkingChange = { enabled ->
                         scope.launch {
                             consentStore.setConsent(enabled)
@@ -745,12 +752,12 @@ private fun StartupBootstrapLoadingScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             CircularProgressIndicator()
-            Text(
+            WrapSafeText(
                 text = "Preparing startup",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
+            WrapSafeText(
                 text = "Loading agreement state before startup policy review.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

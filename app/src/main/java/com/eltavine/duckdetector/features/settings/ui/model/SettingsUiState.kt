@@ -16,8 +16,11 @@
 
 package com.eltavine.duckdetector.features.settings.ui.model
 
+import com.eltavine.duckdetector.core.i18n.AppLanguageOption
+
 data class SettingsUiState(
     val isCrlNetworkingEnabled: Boolean,
+    val selectedLanguage: AppLanguageOption,
     val versionName: String,
     val versionCode: Int,
     val buildTimeUtc: String,

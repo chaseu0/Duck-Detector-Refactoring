@@ -50,21 +50,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import compose.icons.SimpleIcons
 import compose.icons.simpleicons.Tencentqq
 import com.eltavine.duckdetector.BuildConfig
 import com.eltavine.duckdetector.core.ui.model.DetectionSeverity
 import com.eltavine.duckdetector.R
+import com.eltavine.duckdetector.core.i18n.localizeUiText
+import com.eltavine.duckdetector.core.i18n.rememberLocalizedUiText
 import com.eltavine.duckdetector.core.ui.components.WrapSafeText
 import com.eltavine.duckdetector.core.ui.presentation.formatBuildTimeUtc
 import com.eltavine.duckdetector.core.ui.presentation.rememberStatusAppearance
@@ -92,6 +97,7 @@ import com.eltavine.duckdetector.features.tee.ui.model.TeeFooterActionId
 import com.eltavine.duckdetector.features.virtualization.ui.card.VirtualizationDetectorCard
 import com.eltavine.duckdetector.features.zygisk.ui.card.ZygiskDetectorCard
 import com.eltavine.duckdetector.ui.theme.ShapeTokens
+import java.util.Locale
 
 private const val DUCK_DETECTOR_QQ_GROUP = "789344870"
 private const val DUCK_DETECTOR_QQ_GROUP_URL =
@@ -109,6 +115,12 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        ConfigurationCompat.getLocales(configuration)[0] ?: Locale.getDefault()
+    }
+    val reportSavedText = rememberLocalizedUiText("Report saved")
+    val qqCopiedText = rememberLocalizedUiText("QQ group number copied: $DUCK_DETECTOR_QQ_GROUP")
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -121,13 +133,13 @@ fun DashboardScreen(
                 }
                 Toast.makeText(
                     context,
-                    "Report saved",
+                    reportSavedText,
                     Toast.LENGTH_SHORT,
                 ).show()
             } catch (e: Exception) {
                 Toast.makeText(
                     context,
-                    "Save failed: ${e.message}",
+                    localizeUiText("Save failed: ${e.message}", currentLocale),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -383,7 +395,7 @@ private fun BrandHeader() {
                         )
                     Toast.makeText(
                         context,
-                        "QQ group number copied: $DUCK_DETECTOR_QQ_GROUP",
+                        qqCopiedText,
                         Toast.LENGTH_SHORT,
                     ).show()
                     uriHandler.openUri(DUCK_DETECTOR_QQ_GROUP_URL)
