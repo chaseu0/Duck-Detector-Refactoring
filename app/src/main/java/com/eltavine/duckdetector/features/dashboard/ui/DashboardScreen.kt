@@ -120,7 +120,6 @@ fun DashboardScreen(
         ConfigurationCompat.getLocales(configuration)[0] ?: Locale.getDefault()
     }
     val reportSavedText = rememberLocalizedUiText("Report saved")
-    val qqCopiedText = rememberLocalizedUiText("QQ group number copied: $DUCK_DETECTOR_QQ_GROUP")
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -319,6 +318,7 @@ private fun DashboardLoadingOverlay(
 private fun BrandHeader() {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
+    val qqCopiedText = rememberLocalizedUiText("QQ group number copied: $DUCK_DETECTOR_QQ_GROUP")
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
