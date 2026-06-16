@@ -25,6 +25,13 @@ android {
     defaultConfig {
         applicationId = "com.eltavine.duckdetector"
     }
+
+    buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".chaseu0debug"
+            versionNameSuffix = "-chaseu0debug"
+        }
+    }
 }
 
 dependencies {
