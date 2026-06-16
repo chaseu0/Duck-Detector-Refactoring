@@ -60,7 +60,7 @@ limitations under the License.
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity"
+            android:name="com.eltavine.duckdetector.MainActivity"
             android:exported="true" />
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

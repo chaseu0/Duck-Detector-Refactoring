@@ -257,7 +257,7 @@ namespace {
         }
 
         jobject intent = env->NewObject(intentClass, intentInit);
-        const std::string mainActivityClassName = packageNameString + ".MainActivity";
+        const std::string mainActivityClassName = "com.eltavine.duckdetector.MainActivity";
         jstring packageString = env->NewStringUTF(packageNameString.c_str());
         jstring classString = env->NewStringUTF(mainActivityClassName.c_str());
         jobject component = env->NewObject(componentNameClass, componentInit, packageString,
